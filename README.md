@@ -13,6 +13,13 @@ up to a certain severity,
 and are assigned to patients with those conditions
 for an amount of time based on condition severity.
 
+We make some unrealistic assumptions for this project:
+- All diseases are curable
+- Diseases are cured in a deterministic amount of time
+- Patients are prioritized by total symptom severity
+- One doctor treats one disease at a time
+- Multiple doctors may be assigned to one patient to treat separate ailments
+
 ## BTree Implementation
 
 For the BTree,
