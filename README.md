@@ -16,8 +16,13 @@ for an amount of time based on condition severity.
 ## BTree Implementation
 
 For the BTree,
-a `t` value of 4096 was chosen
-with the help of `getconf PAGESIZE`.
+a `t` value of 6 was chosen
+to match the [standard library's choice](https://doc.rust-lang.org/src/alloc/collections/btree/node.rs.html#43).
+Their choice is informed by benchmarks.
+
+Although we'd love to have calculated `t` based on page size, the calculation
+is trickier since our BTree supports generic data and we don't exactly have
+child pointers.
 
 ## Visual Component
 
