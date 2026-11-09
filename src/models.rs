@@ -1,12 +1,13 @@
 // TODO: Comments, doc comments
-// TODO: Use our BTree
 
 use std::cell::RefCell;
-use std::collections::{BTreeSet, BinaryHeap};
+use std::collections::BinaryHeap;
 use std::fmt::Display;
 use std::rc::Rc;
 
 use chrono::Utc;
+
+use crate::btree::BTree;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PersonalInformation {
@@ -140,9 +141,9 @@ impl Ord for Patient {
 #[derive(Default)]
 pub struct Hospital {
     /// All doctors at this hospital.
-    pub doctors: BTreeSet<Rc<RefCell<Doctor>>>,
+    pub doctors: BTree<Rc<RefCell<Doctor>>>,
     /// All patients at this hospital.
-    pub patients: BTreeSet<Rc<RefCell<Patient>>>,
+    pub patients: BTree<Rc<RefCell<Patient>>>,
 
     /// A queue of patients to be treated, sorted first by priority, then by personal information.
     pub patient_queue: BinaryHeap<(usize, Rc<RefCell<Patient>>)>,
@@ -156,7 +157,7 @@ impl Hospital {
     pub fn generate_patient_queue(&mut self) {
         self.patient_queue.clear();
 
-        for patient in &self.patients {
+        for patient in self.patients.inorder().iter() {
             let priority = patient.borrow().priority();
             self.patient_queue.push((priority, Rc::clone(patient)));
         }

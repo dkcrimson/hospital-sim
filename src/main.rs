@@ -2,6 +2,7 @@
 
 use self::models::*;
 
+mod btree;
 mod models;
 
 fn main() {
@@ -28,7 +29,7 @@ fn main() {
         let mut patient = patient.borrow_mut();
 
         for pc in patient.conditions.clone() {
-            if let Some(doctor) = hospital.doctors.iter().find(|doctor| doctor.borrow().available && doctor.borrow().conditions.iter().find(|dc| dc.condition == pc.condition && dc.severity >= pc.severity).is_some()) {
+            if let Some(doctor) = hospital.doctors.inorder().iter().find(|doctor| doctor.borrow().available && doctor.borrow().conditions.iter().find(|dc| dc.condition == pc.condition && dc.severity >= pc.severity).is_some()) {
                 let mut doctor = doctor.borrow_mut();
                 Hospital::assign(&mut doctor, &mut patient, &pc);
             }
