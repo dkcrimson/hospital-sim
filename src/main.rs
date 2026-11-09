@@ -1,3 +1,5 @@
+// TODO: SFML
+
 use self::models::*;
 
 mod models;
@@ -18,6 +20,10 @@ fn main() {
 
     hospital.generate_patient_queue();
 
+    // TODO: Need some kind of timekeeping. Patients should be released after being treated for a
+    // sufficient amount of time, based on the severity of their conditions. Condition severity
+    // needs to be reduced after that amount of time for each condition. Need to be able to step
+    // through time (even if only forward).
     while let Some((_priority, patient)) = hospital.patient_queue.pop() {
         let mut patient = patient.borrow_mut();
 
