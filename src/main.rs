@@ -68,6 +68,16 @@ fn initialize_hospital() -> Hospital {
     hospital.add_patient(Patient::new(PersonalInformation::new("Teddy",     "Leonard",      "2001-01-09"), conditions([("Total Organ Failure", 10), ("Coma", 9)])                       ));
     hospital.add_patient(Patient::new(PersonalInformation::new("Esha",      "Gallagher",    "2001-09-05"), conditions([("Parkinsons", 8)])                                              ));
 
+    use std::rc::Rc;
+    for doctor in hospital.doctors.inorder().iter() {
+        for condition in &doctor.borrow().conditions {
+            hospital.doctors_by_condition.entry(Rc::clone(&condition.condition)).or_default()
+                .entry(condition.severity)
+                .or_default()
+                .push(Rc::clone(doctor));
+        }
+    }
+
     hospital.generate_patient_queue();
     hospital
 }
@@ -83,7 +93,7 @@ fn main() {
         let mut patient = patient.borrow_mut();
 
         for pc in patient.conditions.clone() {
-            if let Some(doctor) = hospital.doctors.inorder().iter().find(|doctor| doctor.borrow().available && doctor.borrow().conditions.iter().find(|dc| dc.condition == pc.condition && dc.severity >= pc.severity).is_some()) {
+            if let Some(doctor) = hospital.select_doctor(&pc) {
                 let mut doctor = doctor.borrow_mut();
                 Hospital::assign(&mut doctor, &mut patient, &pc);
             }

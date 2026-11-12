@@ -1,13 +1,16 @@
 // TODO: Comments, doc comments
 
 use std::cell::RefCell;
-use std::collections::BinaryHeap;
+use std::collections::{BTreeMap, BinaryHeap, HashMap};
 use std::fmt::Display;
 use std::rc::Rc;
 
 use chrono::Utc;
 
 use crate::btree::BTree;
+
+pub type DoctorRef = Rc<RefCell<Doctor>>;
+pub type PatientRef = Rc<RefCell<Patient>>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PersonalInformation {
@@ -33,19 +36,19 @@ impl PersonalInformation {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub struct Condition {
     /// The severity of the condition.
     /// Lowest is 0; highest is 10.
     pub severity: u8,
     /// The medical condition.
-    pub condition: String,
+    pub condition: Rc<str>,
 }
 
 impl Condition {
     #[inline]
     #[must_use]
-    pub fn new(condition: impl Into<String>, severity: u8) -> Self {
+    pub fn new(condition: impl Into<Rc<str>>, severity: u8) -> Self {
         Self { condition: condition.into(), severity }
     }
 }
@@ -140,13 +143,17 @@ impl Ord for Patient {
 
 #[derive(Default)]
 pub struct Hospital {
-    /// All doctors at this hospital.
-    pub doctors: BTree<Rc<RefCell<Doctor>>>,
+    /// A sorted set of all doctors at this hospital.
+    pub doctors: BTree<DoctorRef>,
+
+    /// This hospital's doctors, by condition.
+    pub doctors_by_condition: HashMap<Rc<str>, BTreeMap<u8, Vec<DoctorRef>>>,
+
     /// All patients at this hospital.
-    pub patients: BTree<Rc<RefCell<Patient>>>,
+    pub patients: BTree<PatientRef>,
 
     /// A queue of patients to be treated, sorted first by priority, then by personal information.
-    pub patient_queue: BinaryHeap<(usize, Rc<RefCell<Patient>>)>,
+    pub patient_queue: BinaryHeap<(usize, PatientRef)>,
 }
 
 impl Hospital {
@@ -161,6 +168,22 @@ impl Hospital {
             let priority = patient.borrow().priority();
             self.patient_queue.push((priority, Rc::clone(patient)));
         }
+    }
+
+    /// Select the least-qualified doctor available to treat this condition.
+    ///
+    /// The idea in doing this is to try to leave more qualified doctors free in case a patient with
+    /// more severe conditions arrives. Of course, this isn't perfect since a doctor may be highly
+    /// qualified for one condition and less qualified for another, and be chosen for the less
+    /// severe condition, leaving them unavailable in the event a patient with a severe case of the
+    /// first condition arrives.
+    pub fn select_doctor(&self, condition: &Condition) -> Option<DoctorRef> {
+        let qualified_doctors = self.doctors_by_condition
+            .get(&condition.condition)?
+            .range(condition.severity..)
+            .next()?.1;
+
+        qualified_doctors.iter().find(|doctor| doctor.borrow().available).cloned()
     }
 
     pub fn assign(doctor: &mut Doctor, patient: &mut Patient, pc: &Condition) {
