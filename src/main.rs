@@ -85,18 +85,57 @@ fn initialize_hospital() -> Hospital {
 fn main() {
     let mut hospital = initialize_hospital();
 
-    // TODO: Need some kind of timekeeping. Patients should be released after being treated for a
-    // sufficient amount of time, based on the severity of their conditions. Condition severity
-    // needs to be reduced after that amount of time for each condition. Need to be able to step
-    // through time (even if only forward).
-    while let Some((_priority, patient)) = hospital.patient_queue.pop() {
-        let mut patient = patient.borrow_mut();
+    // Main simulation loop
+    // TODO: Keep a timer, perhaps as a field in `Hospital`(?), and increment it after each
+    // iteration of this loop. Display this time each loop iteration methinks.
+    loop {
+        let mut deferred = Vec::new();
 
-        for pc in patient.conditions.clone() {
-            if let Some(doctor) = hospital.select_doctor(&pc) {
-                let mut doctor = doctor.borrow_mut();
-                Hospital::assign(&mut doctor, &mut patient, &pc);
+        while let Some((priority, patient)) = hospital.patient_queue.pop() {
+            let treatable = patient.borrow().conditions
+                .iter()
+                .all(|condition| hospital.select_doctor(condition).is_some());
+
+            if !treatable {
+                deferred.push((priority, patient));
+                continue;
+            }
+
+            {
+                let mut patient = patient.borrow_mut();
+                for condition in patient.conditions.clone() {
+                    if let Some(doctor) = hospital.select_doctor(&condition) {
+                        let mut doctor = doctor.borrow_mut();
+                        Hospital::assign_doctor(&mut doctor, &mut patient, &condition);
+                        // TODO: Hospital::assign_doctor() should return the time when the treatment
+                        // is to be completed.
+
+                        // TODO: Need to track patients being actively treated, since this
+                        // information is needed across main loop iterations. Might be interesting
+                        // to track and report treatment progress for each patient in each
+                        // iteration.
+
+                        // TODO: Once a patient has been completely treated for all their
+                        // conditions, they should be discharged from the hospital.
+
+                        // TODO: (Optional) Could be interesting to reduce symptom severity over
+                        // time instead of all at once upon treatment completion, but this would
+                        // probably be more complex to do.
+                    }
+                }
             }
         }
+
+        // Mark doctors as available
+        // TODO: This needs to only run for doctors who have finished treating their patients
+        for &doctor in hospital.doctors.inorder().iter().filter(|doctor| !doctor.borrow().available) {
+            let mut doctor = doctor.borrow_mut();
+            Hospital::mark_doctor_available(&mut doctor);
+        }
+
+        hospital.patient_queue.extend(deferred);
+
+        let _ = std::io::stdin().read_line(&mut String::new());
+        // TODO: What should be done once all patients have been treated and discharged?
     }
 }

@@ -186,10 +186,22 @@ impl Hospital {
         qualified_doctors.iter().find(|doctor| doctor.borrow().available).cloned()
     }
 
-    pub fn assign(doctor: &mut Doctor, patient: &mut Patient, pc: &Condition) {
+    pub fn assign_doctor(doctor: &mut Doctor, patient: &mut Patient, pc: &Condition) {
         println!("Assigning {doctor} to {patient} to treat {pc}");
         doctor.available = false;
         patient.being_treated = true;
+    }
+
+    pub fn mark_doctor_available(doctor: &mut Doctor) {
+        println!("{doctor} is now available");
+        doctor.available = true;
+    }
+
+    pub fn discharge_patient(&mut self, patient: &mut Patient) {
+        println!("Discharging {patient}");
+        assert! { patient.conditions.is_empty() }
+        patient.being_treated = false;
+        // TODO: Remove patient from hospital
     }
 
     pub fn add_doctor(&mut self, doctor: Doctor) {
