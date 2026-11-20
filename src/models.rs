@@ -15,7 +15,6 @@ pub type PatientRef = Rc<RefCell<Patient>>;
 // ---------------------------------------------------------------------------
 // Timekeeping
 // ---------------------------------------------------------------------------
-
 /// How many simulated minutes pass each time the user advances the simulation.
 /// 15 is small enough to watch things change and big enough that a whole day is only ~100 steps.
 pub const TICK_MINUTES: u32 = 15;
