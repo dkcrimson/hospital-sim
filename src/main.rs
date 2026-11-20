@@ -17,25 +17,29 @@ fn conditions(conditions: impl Into<Vec<(&'static str, u8)>>) -> Vec<Condition> 
 /// * <https://www.name-generator.org.uk/quick/>
 /// * <https://www.random.org/calendar-dates/?num=25&start_day=9&start_month=11&start_year=1955&end_day=31&end_month=12&end_year=2003&mondays=on&tuesdays=on&wednesdays=on&thursdays=on&fridays=on&saturdays=on&sundays=on&display=2&format=html&rnd=new>
 /// * <https://plagueinc.wiki.gg/wiki/Symptoms>
+///
+/// Timekeeping: every doctor has a shift (`with_shift`, hours of the day;
+/// three 12-hour crews: 6-18, 12-24 and 18-6 over midnight) and
+/// some patients walk in later than the opening time (`arriving_at`, minutes after 06:00).
 fn initialize_hospital() -> Hospital {
     let mut hospital = Hospital::new();
 
     // Doctors
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("John",        "Parkinsons",   "1996-12-05"), conditions([("Parkinsons", 10), ("Arthritis", 6)])                           ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Arthur",      "Smith",        "1989-07-15"), conditions([("Leukemia", 8), ("Arthritis", 3)])                              ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Michael",     "Maxwell",      "1988-07-15"), conditions([("Pneumonia", 10)])                                              ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Osman",       "Wills",        "1999-02-25"), conditions([("Cysts", 10), ("Necrosis", 4)])                                 ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Max",         "Watts",        "1980-08-18"), conditions([("Pulmonary Oedema", 10), ("Internal Haemorrhaging", 9)])        ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Vera",        "Martin",       "1986-12-13"), conditions([("Pulmonary Fibrosis", 8)])                                      ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Patrick",     "Coleman",      "1988-02-10"), conditions([("Systemic Infection", 9), ("Necrosis", 10)])                    ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Habiba",      "Matthews",     "1989-03-02"), conditions([("Seizures", 10), ("Epilepsy", 10)])                             ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Tyrese",      "Costello",     "1989-12-31"), conditions([("Total Organ Failure", 8), ("Abscesses", 10), ("Cysts", 7)])    ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Conor",       "Ward",         "1990-03-14"), conditions([("Immune Suppression", 9), ("Coma", 9)])                         ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Chanelle",    "Nicholson",    "1991-10-09"), conditions([("Hypoxia", 10), ("Anemia", 10)])                                ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Tillie",      "Hale",         "1994-05-18"), conditions([("Internal Haemorrhaging", 10)])                                 ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Benedict",    "Skinner",      "1995-07-30"), conditions([("Pulmonary Fibrosis", 8)])                                      ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Thea",        "Mcbride",      "1996-11-11"), conditions([("Hypoxia", 9), ("Total Organ Failure", 10)])                    ));
-    hospital.add_doctor(Doctor::new(PersonalInformation::new("Hajra",       "Baird",        "1997-11-03"), conditions([("Arthritis", 10), ("Rashes", 10)])                              ));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("John",        "Parkinsons",   "1996-12-05"), conditions([("Parkinsons", 10), ("Arthritis", 6)])).with_shift(6, 18));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Arthur",      "Smith",        "1989-07-15"), conditions([("Leukemia", 8), ("Arthritis", 3)])).with_shift(6, 18));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Michael",     "Maxwell",      "1988-07-15"), conditions([("Pneumonia", 10)])).with_shift(6, 18));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Osman",       "Wills",        "1999-02-25"), conditions([("Cysts", 10), ("Necrosis", 4)])).with_shift(6, 18));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Max",         "Watts",        "1980-08-18"), conditions([("Pulmonary Oedema", 10), ("Internal Haemorrhaging", 9)])).with_shift(6, 18));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Vera",        "Martin",       "1986-12-13"), conditions([("Pulmonary Fibrosis", 8)])).with_shift(12, 24));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Patrick",     "Coleman",      "1988-02-10"), conditions([("Systemic Infection", 9), ("Necrosis", 10)])).with_shift(12, 24));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Habiba",      "Matthews",     "1989-03-02"), conditions([("Seizures", 10), ("Epilepsy", 10)])).with_shift(18, 6));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Tyrese",      "Costello",     "1989-12-31"), conditions([("Total Organ Failure", 8), ("Abscesses", 10), ("Cysts", 7)])).with_shift(18, 6));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Conor",       "Ward",         "1990-03-14"), conditions([("Immune Suppression", 9), ("Coma", 9)])).with_shift(12, 24));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Chanelle",    "Nicholson",    "1991-10-09"), conditions([("Hypoxia", 10), ("Anemia", 10)])).with_shift(6, 18));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Tillie",      "Hale",         "1994-05-18"), conditions([("Internal Haemorrhaging", 10)])).with_shift(6, 18));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Benedict",    "Skinner",      "1995-07-30"), conditions([("Pulmonary Fibrosis", 8)])).with_shift(12, 24));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Thea",        "Mcbride",      "1996-11-11"), conditions([("Hypoxia", 9), ("Total Organ Failure", 10)])).with_shift(12, 24));
+    hospital.add_doctor(Doctor::new(PersonalInformation::new("Hajra",       "Baird",        "1997-11-03"), conditions([("Arthritis", 10), ("Rashes", 10)])).with_shift(6, 18));
 
     // Patients
     hospital.add_patient(Patient::new(PersonalInformation::new("Alex",      "Atwood",       "2003-01-23"), conditions([("Parkinsons", 2)])                                              ));
@@ -56,17 +60,17 @@ fn initialize_hospital() -> Hospital {
     hospital.add_patient(Patient::new(PersonalInformation::new("Bartosz",   "Massey",       "1969-03-07"), conditions([("Pneumonia", 5)])                                               ));
     hospital.add_patient(Patient::new(PersonalInformation::new("Zayn",      "Cardenas",     "1970-02-13"), conditions([("Immune Suppression", 9), ("Cysts", 6)])                        ));
     hospital.add_patient(Patient::new(PersonalInformation::new("Wilson",    "Humphrey",     "1973-02-07"), conditions([("Seizures", 7), ("Epilepsy", 9)])                               ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Kobi",      "Le",           "1979-04-19"), conditions([("Coma", 8)])                                                    ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Moshe",     "Goodman",      "1979-07-06"), conditions([("Cysts", 2), ("Rashes", 5)])                                    ));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Kobi",      "Le",           "1979-04-19"), conditions([("Coma", 8)])).arriving_at(300));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Moshe",     "Goodman",      "1979-07-06"), conditions([("Cysts", 2), ("Rashes", 5)])).arriving_at(300));
     hospital.add_patient(Patient::new(PersonalInformation::new("Lacie",     "Cox",          "1979-09-10"), conditions([("Hypoxia", 6)])                                                 ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Gabrielle", "Cuevas",       "1980-07-25"), conditions([("Pulmonary Fibrosis", 8), ("Hypoxia", 9), ("Seizures", 8)])     ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Sunny",     "McKay",        "1988-04-18"), conditions([("Internal Haemorrhaging", 1), ("Parkinsons", 2)])               ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Conner",    "Kline",        "1989-02-23"), conditions([("Rashes", 8)])                                                  ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Adam",      "Knox",         "1991-06-15"), conditions([("Pneumonia", 4)])                                               ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Kaylee",    "Fernandez",    "1993-08-28"), conditions([("Necrosis", 8), ("Cysts", 9), ("Epilepsy", 9), ("Rashes", 9)])  ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Kaiden",    "Cummings",     "1994-04-16"), conditions([("Coma", 4)])                                                    ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Teddy",     "Leonard",      "2001-01-09"), conditions([("Total Organ Failure", 10), ("Coma", 9)])                       ));
-    hospital.add_patient(Patient::new(PersonalInformation::new("Esha",      "Gallagher",    "2001-09-05"), conditions([("Parkinsons", 8)])                                              ));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Gabrielle", "Cuevas",       "1980-07-25"), conditions([("Pulmonary Fibrosis", 8), ("Hypoxia", 9), ("Seizures", 8)])).arriving_at(240));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Sunny",     "McKay",        "1988-04-18"), conditions([("Internal Haemorrhaging", 1), ("Parkinsons", 2)])).arriving_at(180));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Conner",    "Kline",        "1989-02-23"), conditions([("Rashes", 8)])).arriving_at(120));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Adam",      "Knox",         "1991-06-15"), conditions([("Pneumonia", 4)])).arriving_at(120));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Kaylee",    "Fernandez",    "1993-08-28"), conditions([("Necrosis", 8), ("Cysts", 9), ("Epilepsy", 9), ("Rashes", 9)])).arriving_at(60));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Kaiden",    "Cummings",     "1994-04-16"), conditions([("Coma", 4)])).arriving_at(60));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Teddy",     "Leonard",      "2001-01-09"), conditions([("Total Organ Failure", 10), ("Coma", 9)])).arriving_at(180));
+    hospital.add_patient(Patient::new(PersonalInformation::new("Esha",      "Gallagher",    "2001-09-05"), conditions([("Parkinsons", 8)])).arriving_at(240));
 
     use std::rc::Rc;
     for doctor in hospital.doctors.inorder().iter() {
@@ -78,64 +82,61 @@ fn initialize_hospital() -> Hospital {
         }
     }
 
-    hospital.generate_patient_queue();
+    // The priority queue is built by `Hospital::start()` because queued patients depends on the clock.
     hospital
 }
 
 fn main() {
     let mut hospital = initialize_hospital();
 
-    // Main simulation loop
-    // TODO: Keep a timer, perhaps as a field in `Hospital`(?), and increment it after each
-    // iteration of this loop. Display this time each loop iteration methinks.
+    // Time 0: the clock reads 06:00 and the first doctors take the first patients.
+    hospital.start();
+    hospital.print_status();
+
+    // Sim loop. Catch blocks too.
+    // Time only moves when the user asks for it: ENTER = one tick (15 min), q = quit.
     loop {
-        let mut deferred = Vec::new();
+        if hospital.is_finished() {
+            println!("Every patient has been discharged. The simulation ended at {}.", format_time(hospital.now));
+            break;
+        }
 
-        while let Some((priority, patient)) = hospital.patient_queue.pop() {
-            let treatable = patient.borrow().conditions
-                .iter()
-                .all(|condition| hospital.select_doctor(condition).is_some());
+        println!("Press ENTER for the next 15 minutes, type a number for that many steps, or q to quit.");
 
-            if !treatable {
-                deferred.push((priority, patient));
-                continue;
+        let mut input = String::new();
+        match std::io::stdin().read_line(&mut input) {
+            Ok(0) => break, // end of input and Ctrl-D to stop instead of looping forever
+            Ok(_) => {}
+            Err(error) => {
+                eprintln!("Could not read input: {error}");
+                break;
             }
+        }
 
-            {
-                let mut patient = patient.borrow_mut();
-                for condition in patient.conditions.clone() {
-                    if let Some(doctor) = hospital.select_doctor(&condition) {
-                        let mut doctor = doctor.borrow_mut();
-                        Hospital::assign_doctor(&mut doctor, &mut patient, &condition);
-                        // TODO: Hospital::assign_doctor() should return the time when the treatment
-                        // is to be completed.
+        let text = input.trim();
+        if text == "q" {
+            break;
+        }
 
-                        // TODO: Need to track patients being actively treated, since this
-                        // information is needed across main loop iterations. Might be interesting
-                        // to track and report treatment progress for each patient in each
-                        // iteration.
-
-                        // TODO: Once a patient has been completely treated for all their
-                        // conditions, they should be discharged from the hospital.
-
-                        // TODO: (Optional) Could be interesting to reduce symptom severity over
-                        // time instead of all at once upon treatment completion, but this would
-                        // probably be more complex to do.
-                    }
+        // An empty line means 1 step anything else has to be a number.
+        let steps: u32 = if text.is_empty() {
+            1
+        } else {
+            match text.parse::<u32>() {
+                Ok(number) => number,
+                Err(_) => {
+                    println!("'{text}' is not a number, try again.");
+                    continue;
                 }
             }
+        };
+
+        for _ in 0..steps {
+            if hospital.is_finished() {
+                break;
+            }
+            hospital.tick();
         }
-
-        // Mark doctors as available
-        // TODO: This needs to only run for doctors who have finished treating their patients
-        for &doctor in hospital.doctors.inorder().iter().filter(|doctor| !doctor.borrow().available) {
-            let mut doctor = doctor.borrow_mut();
-            Hospital::mark_doctor_available(&mut doctor);
-        }
-
-        hospital.patient_queue.extend(deferred);
-
-        let _ = std::io::stdin().read_line(&mut String::new());
-        // TODO: What should be done once all patients have been treated and discharged?
+        hospital.print_status();
     }
 }
