@@ -69,6 +69,6 @@ minutes      = base * 10 / (5 + skill)
 
 ## Team Member Contributions
 
-Daniel - Hospital Framework (`models.rs`), Data models (`models.rs`), B-Tree (`btree.rs`), Base (`main.rs`)
-Alexis - Timekeeping: simulation clock, shifts, doctor-patient logic (`models.rs`, `main.rs`), Documentation (idk if i am doing the report lol), UML (idk if tima is doing uml lol)
-Tim(a) - SFML (TBA)
+* **Daniel** @[dkcrimson] — Hospital Framework (`models.rs`), Data models (`models.rs`), B-Tree (`btree.rs`), Base (`main.rs`)
+* **Alexis** @[LexisArvay] — Timekeeping simulation clock, shifts, doctor-patient logic (`models.rs`, `main.rs`)
+* **Tim(a):** @[tpolkovnichenko] — SFML (`TBA`)
