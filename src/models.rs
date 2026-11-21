@@ -253,16 +253,14 @@ pub struct Treatment {
 pub struct Hospital {
     /// A sorted set of all doctors at this hospital.
     pub doctors: BTree<DoctorRef>,
-
+    // NOTE: We use [`std::collections::BTreeMap`] here because we need its more advanced `ranges()`
+    // functionality. We still use our [`BTree`] above to store doctors.
     /// This hospital's doctors, by condition.
     pub doctors_by_condition: HashMap<Rc<str>, BTreeMap<u8, Vec<DoctorRef>>>,
-
     /// All patients at this hospital.
     pub patients: BTree<PatientRef>,
-
     /// A queue of patients to be treated, sorted first by priority, then by personal information.
     pub patient_queue: BinaryHeap<(usize, PatientRef)>,
-
     /// The simulation clock, in minutes since midnight of day 1.
     pub now: u32,
     /// Every treatment that is going on right now.
@@ -374,6 +372,7 @@ impl Hospital {
         self.assign_doctors();
     }
 
+    /// Advance time by [`TICK_MINUTES`], performing necessary actions.
     pub fn tick(&mut self) {
         let before = self.now;
         self.now += TICK_MINUTES;
@@ -541,10 +540,12 @@ impl Hospital {
         }
     }
 
+    /// Add a doctor to the [`Hospital`].
     pub fn add_doctor(&mut self, doctor: Doctor) {
         self.doctors.insert(Rc::new(RefCell::new(doctor)));
     }
 
+    /// Add a patient to the [`Hospital`].
     pub fn add_patient(&mut self, patient: Patient) {
         self.patients.insert(Rc::new(RefCell::new(patient)));
     }

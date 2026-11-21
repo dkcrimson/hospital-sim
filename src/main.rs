@@ -6,6 +6,7 @@ use std::rc::Rc;
 mod btree;
 mod models;
 
+/// Helper funtion to ease the creation of [`Vec<Condition>`].
 fn conditions(conditions: impl Into<Vec<(&'static str, u8)>>) -> Vec<Condition> {
     conditions.into().iter()
         .map(|(condition, severity)| Condition::new(*condition, *severity))
@@ -73,6 +74,7 @@ fn initialize_hospital() -> Hospital {
     hospital.add_patient(Patient::new(PersonalInformation::new("Teddy",     "Leonard",      "2001-01-09"), conditions([("Total Organ Failure", 10), ("Coma", 9)])).arriving_at(180));
     hospital.add_patient(Patient::new(PersonalInformation::new("Esha",      "Gallagher",    "2001-09-05"), conditions([("Parkinsons", 8)])).arriving_at(240));
 
+    // Populate the `doctors_by_condition` field.
     for doctor in hospital.doctors.inorder() {
         for condition in &doctor.borrow().conditions {
             hospital.doctors_by_condition.entry(Rc::clone(&condition.condition)).or_default()

@@ -11,6 +11,7 @@ use std::fmt::Debug;
 /// our data is generic and we don't exactly have child pointers.
 const B: usize = 6;
 
+/// A node in this [`BTree`].
 #[derive(Debug)]
 struct Node<T: Ord> {
     keys: Vec<T>,
@@ -19,6 +20,7 @@ struct Node<T: Ord> {
 }
 
 impl<T: Ord> Node<T> {
+    /// Create a new [`Node`].
     const fn new(is_leaf: bool) -> Self {
         Self {
             keys: Vec::new(),
@@ -28,6 +30,7 @@ impl<T: Ord> Node<T> {
     }
 }
 
+/// A [`BTree`] of degree [`B`].
 #[derive(Debug)]
 pub struct BTree<T: Ord> {
     root: Option<Node<T>>,
@@ -35,6 +38,7 @@ pub struct BTree<T: Ord> {
 }
 
 impl<T: Ord> BTree<T> {
+    /// Create a new [`BTree`].
     #[inline]
     #[must_use]
     pub fn new() -> Self { Self::default() }
