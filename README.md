@@ -20,6 +20,26 @@ We make some unrealistic assumptions for this project:
 - One doctor treats one disease at a time
 - Multiple doctors may be assigned to one patient to treat separate ailments
 
+## Usage
+
+To build the simulation,
+execute the following command from the project's root directory:
+```sh
+make
+```
+
+To run the simulation,
+execute the following command from the project's root directory:
+```sh
+make run
+```
+
+To remove build artifacts,
+execute the following command from the project's root directory:
+```sh
+make clean
+```
+
 ## BTree Implementation
 
 For the BTree,
