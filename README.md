@@ -94,9 +94,9 @@ minutes      = base * 10 / (5 + skill)
 
 ## Team Member Contributions
 
-| Team Member                                   | Contributions                                                                         |
-| :-------------------------------------------: | :-----------------------------------------------------------------------------------  |
-| [Daniel](https://github.com/dkcrimson)        | hospital framework, structs, b-tree, base (`models.rs`, `btree.rs`, `main.rs`)        |
-| [Alexis](https://github.com/LexisArvay)       | timekeeping simulation clock, shifts, doctor-patient logic (`models.rs`, `main.rs`)   |
-| [Tim(a)](https://github.com/tpolkovnichenko)  | SFML ( TODO )                                                                         |
+| Team Member                                   | Contributions                                                                             |
+| :-------------------------------------------: | :---------------------------------------------------------------------------------------- |
+| [Daniel](https://github.com/dkcrimson)        | Hospital framework, structs, B-Tree, project base (`models.rs`, `btree.rs`, `main.rs`)    |
+| [Alexis](https://github.com/LexisArvay)       | Timekeeping simulation clock, shifts, doctor-patient logic (`models.rs`, `main.rs`)       |
+| [Tim(a)](https://github.com/tpolkovnichenko)  | SFML, UML (`TODO`)                                                                        |
 <!-- TODO: Tima's contributions -->
