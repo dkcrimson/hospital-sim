@@ -6,7 +6,7 @@ use std::rc::Rc;
 mod btree;
 mod models;
 
-/// Helper funtion to ease the creation of [`Vec<Condition>`].
+/// Helper function to ease the creation of [`Vec<Condition>`].
 fn conditions(conditions: impl Into<Vec<(&'static str, u8)>>) -> Vec<Condition> {
     conditions.into().iter()
         .map(|(condition, severity)| Condition::new(*condition, *severity))

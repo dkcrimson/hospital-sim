@@ -57,7 +57,7 @@ Time moves in one step (`Hospital::tick`) at 15 mins (`TICK_MINUTES`). The
 clock starts at 06:00:D1 (`START_TIME`) and is stored as minutes until midnight
 of D1 so that it can run past midnight into day 2, 3, and so forth.
 
-**Tick occurences**
+**Tick occurrences**
 
 1. Clock moves 15 minutes and patients who have arrived are announced
    (`Patient::arriving_at`).

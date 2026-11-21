@@ -1,4 +1,4 @@
-//! A mediocre B-Tree implentation since we can't use the standard library's.
+//! A mediocre B-Tree implementation since we can't use the standard library's.
 
 use std::fmt::Debug;
 
