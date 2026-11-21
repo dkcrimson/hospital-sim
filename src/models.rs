@@ -1,6 +1,5 @@
-// TODO: Comments, doc comments
-
 use std::cell::RefCell;
+use std::cmp::Reverse;
 use std::collections::{BTreeMap, BinaryHeap, HashMap};
 use std::fmt::Display;
 use std::rc::Rc;
@@ -31,7 +30,7 @@ pub fn format_time(minutes: u32) -> String {
     let day = minutes / 1440 + 1;
     let hour = (minutes % 1440) / 60;
     let minute = minutes % 60;
-    format!("Day {} {:02}:{:02}", day, hour, minute)
+    format!("Day {day} {hour:02}:{minute:02}")
 }
 
 /// How many minutes one treatment takes.
@@ -43,10 +42,10 @@ pub fn format_time(minutes: u32) -> String {
 /// The result is rounded UP to a whole number of ticks, so a treatment always ends exactly on
 /// a tick (the clock only moves in ticks).
 /// Called by `Hospital::assign_doctor`.
-pub fn treatment_minutes(severity: u8, skill: u32) -> u32 {
+pub const fn treatment_minutes(severity: u8, skill: u32) -> u32 {
     let base = 30 + (severity as u32) * 15;
     let raw = base * 10 / (5 + skill);
-    let ticks = (raw + TICK_MINUTES - 1) / TICK_MINUTES;
+    let ticks = raw.div_ceil(TICK_MINUTES);
     if ticks == 0 {
         return TICK_MINUTES;
     }
@@ -71,7 +70,7 @@ impl PersonalInformation {
     pub fn new(first_name: impl Into<String>, last_name: impl Into<String>, date_of_birth: impl AsRef<str>) -> Self {
         let dob = format!("{} 00:00:00", date_of_birth.as_ref());
         let dob = chrono::NaiveDateTime::parse_from_str(&dob, "%Y-%m-%d %H:%M:%S").unwrap().and_utc();
-        let age = Utc::now().years_since(dob).unwrap() as u8;
+        let age = u8::try_from(Utc::now().years_since(dob).unwrap_or(0)).unwrap_or(u8::MAX);
 
         Self { last_name: last_name.into(), first_name: first_name.into(), date_of_birth: dob.timestamp(), age }
     }
@@ -117,7 +116,7 @@ impl Doctor {
     /// Sets this doctor's shift (0-24 in hrs).
     /// Without it a doctor works around the clock.
     #[must_use]
-    pub fn with_shift(mut self, start: u32, end: u32) -> Self {
+    pub const fn with_shift(mut self, start: u32, end: u32) -> Self {
         self.shift = Shift::new(start, end);
         self
     }
@@ -125,16 +124,12 @@ impl Doctor {
     /// The most severe case of `condition` this doctor can treat. 0 if they don't treat it.
     /// The doctor's "skill" for that condition, it decides how fast they are.
     pub fn skill_for(&self, condition: &str) -> u32 {
-        for c in self.conditions.iter() {
+        for c in &self.conditions {
             if &*c.condition == condition {
-                return c.severity as u32;
+                return u32::from(c.severity);
             }
         }
         0
-    }
-
-    pub fn slug(&self) -> String {
-        format!("doctor-{}-{}-{}", self.personal_information.last_name, self.personal_information.first_name, self.personal_information.date_of_birth)
     }
 }
 
@@ -157,9 +152,6 @@ impl Ord for Doctor {
         self.personal_information.cmp(&other.personal_information)
     }
 }
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PatientSlug(String);
 
 #[derive(Debug)]
 pub struct Patient {
@@ -190,12 +182,9 @@ impl Patient {
         let conditions: BinaryHeap<Condition> = conditions.into();
 
         // Find the worst condition to work out how long this patient can wait.
-        let mut worst: u32 = 0;
-        for c in conditions.iter() {
-            if c.severity as u32 > worst {
-                worst = c.severity as u32;
-            }
-        }
+        let worst = conditions.iter()
+            .max_by_key(|condition| condition.severity)
+            .map_or(0, |condition| u32::from(condition.severity));
         let time_limit = (11 - worst) * 180;
 
         Self {
@@ -214,24 +203,20 @@ impl Patient {
     /// Makes this patient walk in `minutes` after the simulation starts.
     /// Several patients can be given the same time when they arrive together.
     #[must_use]
-    pub fn arriving_at(mut self, minutes: u32) -> Self {
+    pub const fn arriving_at(mut self, minutes: u32) -> Self {
         self.arrival = START_TIME + minutes;
         self
     }
 
     /// Whether this patient is inside the hospital at time `now`.
-    pub fn has_arrived(&self, now: u32) -> bool {
+    pub const fn has_arrived(&self, now: u32) -> bool {
         self.arrival <= now
     }
 
     /// How many minutes this patient has been in the hospital.
-    /// saturating_sub gives 0 instead of crashing when `now` is before `arrival`.
-    pub fn wait_so_far(&self, now: u32) -> u32 {
+    /// `saturating_sub()` gives 0 instead of crashing when `now` is before `arrival`.
+    pub const fn wait_so_far(&self, now: u32) -> u32 {
         now.saturating_sub(self.arrival)
-    }
-
-    pub fn slug(&self) -> PatientSlug {
-        PatientSlug(format!("patient-{}-{}-{}", self.personal_information.last_name, self.personal_information.first_name, self.personal_information.date_of_birth))
     }
 }
 
@@ -305,13 +290,13 @@ impl Hospital {
     pub fn generate_patient_queue(&mut self) {
         self.patient_queue.clear();
 
-        for patient in self.patients.inorder().iter() {
+        for patient in &self.patients.inorder() {
             let patient_ref = patient.borrow();
 
             if patient_ref.discharged || !patient_ref.has_arrived(self.now) {
                 continue;
             }
-            
+
             let priority = patient_ref.priority();
             if priority == 0 {
                 continue;
@@ -332,7 +317,7 @@ impl Hospital {
     ///    a doctor must be ON SHIFT at the current time (`Doctor::on_shift`);
     ///    note: ALL qualified groups are searched from least to most qualified, the first version
     ///    only looked at the least qualified group, so a free expert was never used when the
-    ///    group below them was busy. A patient can get worse than any doctor can handle while waiting, 
+    ///    group below them was busy. A patient can get worse than any doctor can handle while waiting,
     ///    so the severity asked for is capped at the best doctor's level
     pub fn select_doctor(&self, condition: &Condition) -> Option<DoctorRef> {
         let groups = self.doctors_by_condition.get(&condition.condition)?;
@@ -370,9 +355,9 @@ impl Hospital {
 
     /// The patient leaves!  They stay in the patients B-Tree (only insert and search exist)
     /// but are marked `discharged` so the rest of the simulation ignores them!
-    pub fn discharge_patient(&mut self, patient: &mut Patient) {
+    pub fn discharge_patient(&self, patient: &mut Patient) {
         println!("[{}] Discharging {patient}", format_time(self.now));
-        assert! { patient.conditions.is_empty() }
+        assert_eq! { patient.conditions.as_slice(), [] }
         patient.being_treated = false;
         patient.discharged = true;
     }
@@ -396,19 +381,14 @@ impl Hospital {
 
         self.announce_arrivals(before);
         self.finish_treatments();
-        self.make_waiting_patients_worse();
+        self.worsen_waiting_patients();
         self.generate_patient_queue();
         self.assign_doctors();
     }
 
     /// True when every patient has been discharged.
     pub fn is_finished(&self) -> bool {
-        for patient in self.patients.inorder() {
-            if !patient.borrow().discharged {
-                return false;
-            }
-        }
-        true
+        self.patients.inorder().iter().all(|patient| patient.borrow().discharged)
     }
 
     /// Prints the patients whose arrival time is in `before` now].
@@ -436,7 +416,7 @@ impl Hospital {
             // The doctor is free again.
             {
                 let mut doctor = treatment.doctor.borrow_mut();
-                Hospital::mark_doctor_available(&mut doctor, self.now);
+                Self::mark_doctor_available(&mut doctor, self.now);
             }
 
             let mut patient = treatment.patient.borrow_mut();
@@ -461,7 +441,7 @@ impl Hospital {
 
     /// Next step of tick: a patient who has been waiting longer than their time limit gets
     /// one level worse per tick on every condition nobody is treating, up to 10.
-    fn make_waiting_patients_worse(&mut self) {
+    fn worsen_waiting_patients(&self) {
         for patient in self.patients.inorder() {
             let mut patient = patient.borrow_mut();
 
@@ -476,7 +456,7 @@ impl Hospital {
             let mut list: Vec<Condition> = patient.conditions.drain().collect();
             let mut reached_critical = false;
 
-            for c in list.iter_mut() {
+            for c in &mut list {
                 if treating.contains(&c.condition) {
                     continue; // doctor is already tending
                 }
@@ -504,23 +484,20 @@ impl Hospital {
             let treating = patient_ref.borrow().treating.clone();
 
             // Most severe conditions first.
-            conditions.sort_by(|a, b| b.severity.cmp(&a.severity));
+            conditions.sort_by_key(|condition| Reverse(condition.severity));
 
             for condition in conditions {
                 if treating.contains(&condition.condition) {
                     continue;
                 }
 
-                let doctor_ref = match self.select_doctor(&condition) {
-                    Some(doctor_ref) => doctor_ref,
-                    None => continue,
-                };
+                let Some(doctor_ref) = self.select_doctor(&condition) else { continue };
 
                 let finish_time;
                 {
                     let mut doctor = doctor_ref.borrow_mut();
                     let mut patient = patient_ref.borrow_mut();
-                    finish_time = Hospital::assign_doctor(&mut doctor, &mut patient, &condition, self.now);
+                    finish_time = Self::assign_doctor(&mut doctor, &mut patient, &condition, self.now);
                 }
 
                 self.treatments.push(Treatment {
@@ -553,12 +530,12 @@ impl Hospital {
                 waiting.push((p.priority(), Rc::clone(patient)));
             }
         }
-        waiting.sort_by(|a, b| b.0.cmp(&a.0));
-        for (priority, patient) in waiting.iter() {
+        waiting.sort_by_key(|a| Reverse(a.0));
+        for (priority, patient) in &waiting {
             let p = patient.borrow();
             println!("  waiting: {} (priority {}, waited {} min, limit {})", p, priority, p.wait_so_far(self.now), p.time_limit);
         }
-        for treatment in self.treatments.iter() {
+        for treatment in &self.treatments {
             println!("  treating: {} treats {} for {} until {}",
                 treatment.doctor.borrow(), treatment.patient.borrow(), treatment.condition, format_time(treatment.finish_time));
         }
@@ -574,8 +551,8 @@ impl Hospital {
 }
 
 impl Patient {
-    /// An aggregate severity score representing urgency for treatment.  
-    // Conditions a doctor is already working on do not count. they are being taken care of.
+    /// An aggregate severity score representing urgency for treatment.
+    /// Conditions a doctor is already working on do not count. they are being taken care of.
     pub fn priority(&self) -> usize {
         self.conditions.iter()
             .filter(|c| !self.treating.contains(&c.condition))
@@ -612,17 +589,17 @@ pub struct Shift {
 }
 
 impl Shift {
-    pub fn new(start: u32, end: u32) -> Self {
+    pub const fn new(start: u32, end: u32) -> Self {
         Self { start, end }
     }
 
     /// A "shift" covering all 24 hours, the default for doctors without one.
-    pub fn always() -> Self {
+    pub const fn always() -> Self {
         Self { start: 0, end: 24 }
     }
 
     /// Is a doctor with this shift at work at simulation time `now` in minutes?
-    pub fn on_duty(&self, now: u32) -> bool {
+    pub const fn on_duty(&self, now: u32) -> bool {
         let hour = (now % 1440) / 60;
 
         if self.start < self.end {

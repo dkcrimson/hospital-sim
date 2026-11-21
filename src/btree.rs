@@ -14,12 +14,12 @@ const B: usize = 6;
 #[derive(Debug)]
 struct Node<T: Ord> {
     keys: Vec<T>,
-    children: Vec<Node<T>>,
+    children: Vec<Self>,
     is_leaf: bool,
 }
 
 impl<T: Ord> Node<T> {
-    fn new(is_leaf: bool) -> Self {
+    const fn new(is_leaf: bool) -> Self {
         Self {
             keys: Vec::new(),
             children: Vec::new(),
@@ -41,14 +41,11 @@ impl<T: Ord> BTree<T> {
 
     /// Determine whether this [`BTree`] contains `key`.
     pub fn contains(&self, key: &T) -> bool {
-        match &self.root {
-            Some(root) => self.search(root, key),
-            None => false,
-        }
+        self.root.as_ref().is_some_and(|root| Self::search(root, key))
     }
 
     /// Search for a key in this [`BTree`].
-    fn search(&self, node: &Node<T>, key: &T) -> bool {
+    fn search(node: &Node<T>, key: &T) -> bool {
         let i = node.keys.partition_point(|k| k < key);
 
         if i < node.keys.len() && &node.keys[i] == key {
@@ -59,7 +56,7 @@ impl<T: Ord> BTree<T> {
             return false
         }
 
-        self.search(&node.children[i], key)
+        Self::search(&node.children[i], key)
     }
 
     /// Insert `key` into a [`Node`] in this [`BTree`].
