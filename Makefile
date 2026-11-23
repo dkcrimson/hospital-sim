@@ -13,5 +13,5 @@ clean:
 
 check:
 	cargo check
-	rg -i 'todo|fixme' --iglob='!Makefile'
+	rg -i 'todo|fixme' --iglob='!Makefile' || true
 	typos
