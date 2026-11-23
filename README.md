@@ -113,9 +113,6 @@ discharged, not arrived yet).
 Controls: SPACE or ENTER moves the clock by one tick (15 minutes), N moves it
 by one hour, and Q or ESC closes the window.
 
-To use the text version instead (for example on a machine with no display),
-run `target/release/hospital-sim --terminal`.
-
 The window uses the Open Sans font, under the SIL Open Font License (see `assets/OFL.txt`).
 
 ## UML Class Diagram

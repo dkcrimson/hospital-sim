@@ -94,13 +94,9 @@ fn main() {
     hospital.start();
     hospital.print_status();
 
-    // The SFML window is the default. Run with `--terminal` to skip it.
-    // If the window or the font fails to load for another reason, the text version below takes over.
-    if !std::env::args().any(|arg| arg == "--terminal") {
-        match gui::run(&mut hospital) {
-            Ok(()) => return,
-            Err(error) => eprintln!("Could not open the window ({error}), using the terminal instead."),
-        }
+    match gui::run(&mut hospital) {
+        Ok(()) => return,
+        Err(error) => eprintln!("Could not open the window ({error}), using the terminal instead."),
     }
 
     run_terminal(&mut hospital);
