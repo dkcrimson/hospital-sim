@@ -1,9 +1,8 @@
-// TODO: SFML
-
 use models::{Condition, Hospital, Doctor, PersonalInformation, Patient, format_time};
 use std::rc::Rc;
 
 mod btree;
+mod gui;
 mod models;
 
 /// Helper function to ease the creation of [`Vec<Condition>`].
@@ -95,6 +94,20 @@ fn main() {
     hospital.start();
     hospital.print_status();
 
+    // The SFML window is the default. Run with `--terminal` to skip it.
+    // If the window or the font fails to load for another reason, the text version below takes over.
+    if !std::env::args().any(|arg| arg == "--terminal") {
+        match gui::run(&mut hospital) {
+            Ok(()) => return,
+            Err(error) => eprintln!("Could not open the window ({error}), using the terminal instead."),
+        }
+    }
+
+    run_terminal(&mut hospital);
+}
+
+/// The text version of the sim loop.
+fn run_terminal(hospital: &mut Hospital) {
     // Sim loop. Catch blocks too.
     // Time only moves when the user asks for it: ENTER = one tick (15 min), q = quit.
     loop {

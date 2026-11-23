@@ -90,7 +90,43 @@ minutes      = base * 10 / (5 + skill)
 
 ## Visual Component
 
-<!-- TODO: Visual component -->
+![Hospital simulation window](docs/gui.png)
+
+`make run` opens the SFML window (`src/gui.rs`) and shows the hospital at the
+current time. The simulation is the same as before. The window only reads the
+hospital and moves the clock, so the terminal log still prints the same messages.
+
+The window has three panels:
+- **Waiting**: the patients who are in the hospital with a condition nobody is
+  treating, most urgent first. Each row shows the priority (green, yellow, or
+  red as it gets higher) and a bar for how much of the patient's time limit
+  they have used. The bar turns red when the limit is passed, and the name
+  turns red once a condition reaches level 10.
+- **Being treated**: one row per doctor -> patient assignment, with the
+  condition, the time it ends, and a progress bar.
+- **Doctors**: every doctor with their shift, shown as free (green), busy
+  (blue), or off shift (gray).
+
+The top of the window shows the clock and the totals (waiting, in treatment,
+discharged, not arrived yet).
+
+Controls: SPACE or ENTER moves the clock by one tick (15 minutes), N moves it
+by one hour, and Q or ESC closes the window.
+
+To use the text version instead (for example on a machine with no display),
+run `target/release/hospital-sim --terminal`.
+
+The window uses the Open Sans font, under the SIL Open Font License (see `assets/OFL.txt`).
+
+## UML Class Diagram
+
+![UML class diagram](docs/uml.png)
+
++ is public and - is private. A filled diamond means the box owns what it points
+to, and a hollow diamond means it only holds shared references. A dashed arrow
+means "uses". `DoctorRef` and `PatientRef` are shared references
+(`Rc<RefCell<...>>`) to a `Doctor` or `Patient`. `main.rs` and `gui.rs` have no
+structs, so they are shown as utility boxes.
 
 ## Team Member Contributions
 
@@ -98,5 +134,4 @@ minutes      = base * 10 / (5 + skill)
 | :-------------------------------------------: | :---------------------------------------------------------------------------------------- |
 | [Daniel](https://github.com/dkcrimson)        | Hospital framework, structs, B-Tree, project base (`models.rs`, `btree.rs`, `main.rs`)    |
 | [Alexis](https://github.com/LexisArvay)       | Timekeeping simulation clock, shifts, doctor-patient logic (`models.rs`, `main.rs`)       |
-| [Tim(a)](https://github.com/tpolkovnichenko)  | SFML, UML (`TODO`)                                                                        |
-<!-- TODO: Tima's contributions -->
+| [Tim(a)](https://github.com/tpolkovnichenko)  | SFML visual component, UML class diagram (`gui.rs`, `main.rs`)                            |
