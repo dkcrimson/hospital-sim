@@ -43,6 +43,12 @@ impl<T: Ord> BTree<T> {
     #[must_use]
     pub fn new() -> Self { Self::default() }
 
+    #[inline]
+    pub fn len(&self) -> usize { self.size }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool { self.size == 0 }
+
     /// Determine whether this [`BTree`] contains `key`.
     pub fn contains(&self, key: &T) -> bool {
         self.root.as_ref().is_some_and(|root| Self::search(root, key))
@@ -134,6 +140,165 @@ impl<T: Ord> BTree<T> {
         parent.children.insert(index + 1, right);
     }
 
+    /// Take the maximum key from the subtree starting at `node`.
+    fn take_maximum(node: &mut Node<T>) -> T {
+        if node.is_leaf {
+            return node.keys.pop().unwrap();
+        }
+
+        let index = node.children.len() - 1;
+        Self::take_maximum(&mut node.children[index])
+    }
+
+    /// Take the minimum key from the subtree starting at `node`.
+    fn take_minimum(node: &mut Node<T>) -> T {
+        if node.is_leaf {
+            return node.keys.remove(0);
+        }
+
+        Self::take_minimum(&mut node.children[0])
+    }
+
+    /// Borrow a key from the previous node.
+    fn borrow_from_previous(node: &mut Node<T>, index: usize) {
+        // Avoid multiple mutable borrows.
+        let (lhs, rhs) = node.children.split_at_mut(index);
+        let sibling = &mut lhs[index-1];
+        let child = &mut rhs[0];
+
+        // Move the parent's separator into the child.
+        child.keys.insert(0, std::mem::replace(&mut node.keys[index-1], sibling.keys.pop().unwrap()));
+
+        // If we're dealing with internal nodes, move the sibling's rightmost child to the beginning
+        // of the borrowing child.
+        if !sibling.is_leaf {
+            child.children.insert(0, sibling.children.pop().unwrap());
+        }
+    }
+
+    /// Borrow a key from the next node.
+    fn borrow_from_next(node: &mut Node<T>, index: usize) {
+        // Avoid multiple mutable borrows.
+        let (lhs, rhs) = node.children.split_at_mut(index+1);
+        let child = &mut lhs[index];
+        let sibling = &mut rhs[0];
+
+        // Move the parent's separator into the child.
+        child.keys.push(std::mem::replace(&mut node.keys[index], sibling.keys.remove(0)));
+
+        // If we're dealing with internal nodes, move the sibling's leftmost child to the end of the
+        // borrowing child.
+        if !sibling.is_leaf {
+            child.children.push(sibling.children.remove(0));
+        }
+    }
+
+    /// Merge two nodes.
+    fn merge(node: &mut Node<T>, index: usize) {
+        // Avoid multiple mutable borrows.
+        let (lhs, rhs) = node.children.split_at_mut(index+1);
+        let child = &mut lhs[index];
+        let sibling = &mut rhs[0];
+
+        // Move the parent's separator into the child.
+        child.keys.push(node.keys.remove(index));
+
+        // Move all keys from the sibling.
+        child.keys.append(&mut sibling.keys);
+
+        // Move all children if we're dealing with internal nodes.
+        if !sibling.is_leaf {
+            child.children.append(&mut sibling.children);
+        }
+
+        // Remove the sibling we just emptied.
+        node.children.remove(index+1);
+    }
+
+    /// Remove a key from a leaf node.
+    fn remove_from_leaf(node: &mut Node<T>, index: usize) -> T {
+        node.keys.remove(index)
+    }
+
+    /// Remove a key from an internal node, handling borrowing and merging.
+    fn remove_from_internal(node: &mut Node<T>, index: usize) -> T {
+        if node.children[index].keys.len() >= B {
+            // Replace with predecessor
+            let predecessor = Self::take_maximum(&mut node.children[index]);
+            std::mem::replace(&mut node.keys[index], predecessor)
+        } else if node.children[index+1].keys.len() >= B {
+            // Replace with successor
+            let successor = Self::take_minimum(&mut node.children[index+1]);
+            std::mem::replace(&mut node.keys[index], successor)
+        } else {
+            // Merge
+            Self::merge(node, index);
+            Self::remove_inner(&mut node.children[index], &node.keys[index]).unwrap()
+        }
+    }
+
+    /// Remove a `key` from this [`BTree`].
+    pub fn remove(&mut self, key: &T) -> Option<T> {
+        let root = self.root.as_mut()?;
+        let removed = Self::remove_inner(root, key);
+
+        if removed.is_some() {
+            self.size -= 1;
+
+            // Handle the case where we've removed all of root's keys.
+            if self.root.as_ref().unwrap().keys.is_empty() {
+                let root = self.root.take().unwrap();
+
+                self.root = match root.is_leaf {
+                    true => None,
+                    false => Some(root.children.into_iter().next().unwrap())
+                }
+            }
+        }
+
+        removed
+    }
+
+    fn remove_from_any(node: &mut Node<T>, index: usize) -> T {
+        match node.is_leaf {
+            true => Self::remove_from_leaf(node, index),
+            false => Self::remove_from_internal(node, index),
+        }
+    }
+
+    /// Private helper for [`Self::remove()`].
+    fn remove_inner(node: &mut Node<T>, key: &T) -> Option<T> {
+        let index = node.keys.partition_point(|k| k < key);
+
+        // Base case where the key exists in this node.
+        if index < node.keys.len() && &node.keys[index] == key {
+            return Some(Self::remove_from_any(node, index))
+        }
+
+        // Base case where the key is not found :(
+        if node.is_leaf {
+            return None
+        }
+
+        // Ensure the child has sufficient keys before recursing.
+        let mut child_index = index;
+        if node.children[child_index].keys.len() == B - 1 {
+            if child_index > 0 && node.children[child_index-1].keys.len() >= B {
+                Self::borrow_from_previous(node, child_index);
+            } else if child_index < node.keys.len() && node.children[child_index+1].keys.len() >= B {
+                Self::borrow_from_next(node, child_index);
+            } else if child_index < node.keys.len() {
+                Self::merge(node, child_index);
+            } else {
+                child_index -= 1;
+                Self::merge(node, child_index);
+            }
+        }
+
+        // Recursively search the appropriate child.
+        Self::remove_inner(&mut node.children[child_index], key)
+    }
+
     /// Inorder traversal of the [`BTree`].
     pub fn inorder(&self) -> Vec<&T> {
         let mut result = Vec::with_capacity(self.size);
@@ -186,5 +351,14 @@ mod tests {
         assert! { tree.inorder().is_sorted() }
 
         assert_eq! { tree.size, 256 }
+
+        assert! { tree.remove(&0xAB).is_some() }
+        assert! { tree.remove(&0xAB).is_none() }
+
+        for value in 0x00..=0xFF {
+            tree.remove(&value);
+        }
+
+        assert_eq! { tree.inorder().as_slice(), [&0i32; 0] }
     }
 }
