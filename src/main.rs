@@ -83,6 +83,8 @@ fn initialize_hospital() -> Hospital {
         }
     }
 
+    hospital.total_patients = hospital.patients.len();
+
     // The priority queue is built by `Hospital::start()` because queued patients depends on the clock.
     hospital
 }

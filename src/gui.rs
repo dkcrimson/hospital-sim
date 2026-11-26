@@ -105,7 +105,7 @@ fn waiting_patients(hospital: &Hospital) -> Vec<(usize, PatientRef)> {
     let mut waiting: Vec<(usize, PatientRef)> = Vec::new();
     for patient in hospital.patients.inorder() {
         let p = patient.borrow();
-        if !p.discharged && p.has_arrived(hospital.now) && p.priority() > 0 {
+        if p.has_arrived(hospital.now) && p.priority() > 0 {
             waiting.push((p.priority(), std::rc::Rc::clone(patient)));
         }
     }
@@ -115,14 +115,11 @@ fn waiting_patients(hospital: &Hospital) -> Vec<(usize, PatientRef)> {
 
 /// Header: the clock and the totals.
 fn draw_header(window: &mut RenderWindow, font: &Font, hospital: &Hospital, waiting: usize) {
-    let mut discharged = 0;
     let mut not_arrived = 0;
     let all = hospital.patients.inorder();
     for patient in &all {
         let p = patient.borrow();
-        if p.discharged {
-            discharged += 1;
-        } else if !p.has_arrived(hospital.now) {
+        if !p.has_arrived(hospital.now) {
             not_arrived += 1;
         }
     }
@@ -131,9 +128,10 @@ fn draw_header(window: &mut RenderWindow, font: &Font, hospital: &Hospital, wait
     draw_text(window, font, &format_time(hospital.now), 34, BLUE, 860.0 + 12.0, 14.0);
 
     let stats = format!(
-        "Waiting {waiting}     In treatment {}     Discharged {discharged} of {}     Not arrived yet {not_arrived}",
-        hospital.treatments.len(),
-        all.len(),
+        "Waiting {waiting}     In treatment {in_treatment}     Discharged {patients_discharged} of {total_patients}     Not arrived yet {not_arrived}",
+        in_treatment = hospital.treatments.len(),
+        patients_discharged = hospital.patients_discharged,
+        total_patients = hospital.total_patients
     );
     draw_text(window, font, &stats, 18, MUTED, MARGIN, 74.0);
 

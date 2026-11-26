@@ -169,8 +169,6 @@ pub struct Patient {
     pub time_limit: u32,
     /// Names of the conditions a doctor is working on right now.
     pub treating: Vec<Rc<str>>,
-    /// True once every condition is cured and the patient has left.
-    pub discharged: bool,
     /// True if waiting made this patient reach the critical level.
     pub went_critical: bool,
 }
@@ -195,7 +193,6 @@ impl Patient {
             arrival: START_TIME,
             time_limit,
             treating: Vec::new(),
-            discharged: false,
             went_critical: false,
         }
     }
@@ -265,6 +262,10 @@ pub struct Hospital {
     pub now: u32,
     /// Every treatment that is going on right now.
     pub treatments: Vec<Treatment>,
+    /// The number of patients that have been discharged.
+    pub patients_discharged: usize,
+    /// The total number of patients originally in the patient B-Tree.
+    pub total_patients: usize,
 }
 
 impl Hospital {
@@ -278,6 +279,8 @@ impl Hospital {
             patient_queue: BinaryHeap::new(),
             now: START_TIME,
             treatments: Vec::new(),
+            patients_discharged: 0,
+            total_patients: 0,
         }
     }
 
@@ -291,8 +294,8 @@ impl Hospital {
         for patient in &self.patients.inorder() {
             let patient_ref = patient.borrow();
 
-            if patient_ref.discharged || !patient_ref.has_arrived(self.now) {
-                continue;
+            if !patient_ref.has_arrived(self.now) {
+                continue
             }
 
             let priority = patient_ref.priority();
@@ -351,13 +354,12 @@ impl Hospital {
         doctor.available = true;
     }
 
-    /// The patient leaves!  They stay in the patients B-Tree (only insert and search exist)
-    /// but are marked `discharged` so the rest of the simulation ignores them!
-    pub fn discharge_patient(&self, patient: &mut Patient) {
-        println!("[{}] Discharging {patient}", format_time(self.now));
-        assert_eq! { patient.conditions.as_slice(), [] }
-        patient.being_treated = false;
-        patient.discharged = true;
+    /// The patient leaves!  They are removed from the patients B-Tree.
+    pub fn discharge_patient(&mut self, patient: PatientRef) {
+        println!("[{}] Discharging {}", format_time(self.now), patient.borrow());
+        assert_eq! { patient.borrow().conditions.as_slice(), [] }
+        self.patients.remove(&patient);
+        self.patients_discharged += 1;
     }
 
     // -----------------------------------------------------------------------
@@ -387,7 +389,10 @@ impl Hospital {
 
     /// True when every patient has been discharged.
     pub fn is_finished(&self) -> bool {
-        self.patients.inorder().iter().all(|patient| patient.borrow().discharged)
+        if self.patients_discharged == self.total_patients && !self.patients.is_empty() {
+            dbg!(&self.patients);
+        }
+        self.patients.is_empty()
     }
 
     /// Prints the patients whose arrival time is in `before` now].
@@ -418,20 +423,23 @@ impl Hospital {
                 Self::mark_doctor_available(&mut doctor, self.now);
             }
 
-            let mut patient = treatment.patient.borrow_mut();
-            let cured = Rc::clone(&treatment.condition.condition);
+            {
+                let mut patient = treatment.patient.borrow_mut();
+                let cured = Rc::clone(&treatment.condition.condition);
 
-            // The cured condition is removed from the patient.
-            let remaining: Vec<Condition> = patient.conditions.drain()
-                .filter(|c| c.condition != cured)
-                .collect();
-            patient.conditions = BinaryHeap::from(remaining);
-            patient.treating.retain(|name| *name != cured);
+                // The cured condition is removed from the patient.
+                let remaining: Vec<Condition> = patient.conditions.drain()
+                    .filter(|c| c.condition != cured)
+                    .collect();
+                patient.conditions = BinaryHeap::from(remaining);
+                patient.treating.retain(|name| *name != cured);
 
-            println!("[{}] {patient} is cured of {cured}", format_time(self.now));
+                println!("[{}] {patient} is cured of {cured}", format_time(self.now));
+            }
 
-            if patient.conditions.is_empty() {
-                self.discharge_patient(&mut patient);
+            let patient = treatment.patient;
+            if patient.borrow().conditions.is_empty() {
+                self.discharge_patient(patient);
             }
         }
 
@@ -444,7 +452,7 @@ impl Hospital {
         for patient in self.patients.inorder() {
             let mut patient = patient.borrow_mut();
 
-            if patient.discharged || !patient.has_arrived(self.now) {
+            if !patient.has_arrived(self.now) {
                 continue;
             }
             if patient.wait_so_far(self.now) <= patient.time_limit {
@@ -511,21 +519,14 @@ impl Hospital {
 
     /// Prints a summary of the hospital at the current time.
     pub fn print_status(&self) {
-        let mut discharged = 0;
-        for patient in self.patients.inorder() {
-            if patient.borrow().discharged {
-                discharged += 1;
-            }
-        }
-
         println!("--- {} | waiting {} | in treatment {} | discharged {} of {} ---",
-            format_time(self.now), self.patient_queue.len(), self.treatments.len(), discharged, self.patients.inorder().len());
+            format_time(self.now), self.patient_queue.len(), self.treatments.len(), self.patients_discharged, self.total_patients);
 
         // The queue was emptied by `assign_doctors` so rebuild copy just to print it.
         let mut waiting: Vec<(usize, PatientRef)> = Vec::new();
         for patient in self.patients.inorder() {
             let p = patient.borrow();
-            if !p.discharged && p.has_arrived(self.now) && p.priority() > 0 {
+            if p.has_arrived(self.now) && p.priority() > 0 {
                 waiting.push((p.priority(), Rc::clone(patient)));
             }
         }
